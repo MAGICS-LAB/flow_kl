@@ -16,7 +16,7 @@ import numpy as np
 import torch
 from torchdiffeq import odeint
 
-from synthetic_velocity import SyntheticVelocity, constant_delta, sine_delta
+from synthetic_velocity import SyntheticVelocity, constant_delta
 from true_path import Schedule, get_schedule_functions, schedule_to_enum, sigma_p
 from eval_pt2 import (
     backward_ode_and_divergence, log_q_t, score_q_t,

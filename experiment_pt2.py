@@ -4,8 +4,7 @@ Main experiment script for Part-2 bound verification.
 Validates the bound: KL(p_1|q_1) ≤ ε√S
 
 Usage:
-    python experiment_pt2.py --mode synthetic --schedule a1 --delta_type constant --delta_beta 0.0 0.05 0.1 0.2
-    python experiment_pt2.py --mode synthetic --schedule a2 --delta_type sine --delta_beta 0.05 0.1
+    python experiment_pt2.py --mode synthetic --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
 """
 
 import argparse
@@ -20,7 +19,7 @@ from pathlib import Path
 
 from utils import set_seed, get_device, ensure_dirs
 from true_path import Schedule, schedule_to_enum, get_schedule_functions
-from synthetic_velocity import SyntheticVelocity, constant_delta, sine_delta
+from synthetic_velocity import SyntheticVelocity, constant_delta
 from eval_pt2 import (
     compute_epsilon_pt2, compute_kl_at_t1_pt2, 
     compute_score_gap_integral_pt2
@@ -41,8 +40,6 @@ def parse_args():
                         help='Schedule to use')
     
     # Delta configuration
-    parser.add_argument('--delta_type', type=str, choices=['constant', 'sine'], required=True,
-                        help='Type of perturbation δ')
     parser.add_argument('--delta_beta', type=float, nargs='+', required=True,
                         help='Beta values for δ (e.g., 0.0 0.05 0.1 0.2)')
     
@@ -227,7 +224,7 @@ def main():
     print("Part-2: KL Bound Verification")
     print("=" * 80)
     print(f"Schedule: {args.schedule}")
-    print(f"Delta type: {args.delta_type}")
+    print("Delta type: constant")
     print(f"Delta betas: {args.delta_beta}")
     print(f"Seed: {args.seed}")
     print(f"Device: {device}")
@@ -249,14 +246,8 @@ def main():
         print(f"{'='*60}")
         
         # Build delta function
-        if args.delta_type == 'constant':
-            delta_fn = constant_delta(beta)
-            delta_label = f"δ(t)={beta}"
-        elif args.delta_type == 'sine':
-            delta_fn = sine_delta(beta)
-            delta_label = f"δ(t)={beta}·sin(2πt)"
-        else:
-            raise ValueError(f"Unknown delta_type: {args.delta_type}")
+        delta_fn = constant_delta(beta)
+        delta_label = f"δ(t)={beta}"
         
         epsilon_vals = []
         KL_vals = []
@@ -359,7 +350,7 @@ def main():
 
         result = {
             'schedule': args.schedule,
-            'delta_type': args.delta_type,
+            'delta_type': 'constant',
             'beta': float(beta),
             'delta_label': delta_label,
             'epsilon_hat': float(epsilon_mean),
@@ -407,7 +398,7 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Save JSON
-    json_path = Path(args.outdir) / 'results' / f'bound_{args.schedule}_{args.delta_type}_{timestamp}.json'
+    json_path = Path(args.outdir) / 'results' / f'bound_{args.schedule}_constant_{timestamp}.json'
     with open(json_path, 'w') as f:
         # Convert inf to string for JSON compatibility
         results_json = []
@@ -425,7 +416,7 @@ def main():
     print(f"\nSaved results to {json_path}")
     
     # Save CSV (use UTF-8 encoding to handle Greek delta character)
-    csv_path = Path(args.outdir) / 'results' / f'bound_{args.schedule}_{args.delta_type}_{timestamp}.csv'
+    csv_path = Path(args.outdir) / 'results' / f'bound_{args.schedule}_constant_{timestamp}.csv'
     with open(csv_path, 'w', encoding='utf-8') as f:
         f.write('schedule,delta_type,beta,delta_label,epsilon_hat,epsilon_hat_std,KL_hat,KL_hat_std,S_hat,S_hat_std,RHS,RHS_std,ratio,ratio_std,bound_satisfied,num_seeds\n')
         for result in results:
@@ -445,24 +436,24 @@ def main():
     print("\nGenerating plots...")
     
     # Scatter plot
-    scatter_path = Path(args.outdir) / 'plots' / f'bound_scatter_{args.schedule}_{args.delta_type}_{timestamp}.png'
+    scatter_path = Path(args.outdir) / 'plots' / f'bound_scatter_{args.schedule}_constant_{timestamp}.png'
     plot_bound_verification(lhs_list, rhs_list, delta_labels, args.schedule, scatter_path,
                             lhs_std=lhs_std_list if args.num_seeds > 1 else None,
                             rhs_std=rhs_std_list if args.num_seeds > 1 else None)
     
     # Bar chart
-    bar_path = Path(args.outdir) / 'plots' / f'bound_bars_{args.schedule}_{args.delta_type}_{timestamp}.png'
+    bar_path = Path(args.outdir) / 'plots' / f'bound_bars_{args.schedule}_constant_{timestamp}.png'
     plot_bar_chart(lhs_list, rhs_list, delta_labels, args.schedule, bar_path,
                    lhs_std=lhs_std_list if args.num_seeds > 1 else None,
                    rhs_std=rhs_std_list if args.num_seeds > 1 else None)
     
     # f̂(t) curves
-    fhat_path = Path(args.outdir) / 'plots' / f'fhat_curves_{args.schedule}_{args.delta_type}_{timestamp}.png'
+    fhat_path = Path(args.outdir) / 'plots' / f'fhat_curves_{args.schedule}_constant_{timestamp}.png'
     plot_fhat_curves(fhat_data, delta_labels, args.schedule, fhat_path)
     
     # ε-curves plot
     if args.make_eps_curves:
-        eps_curves_path = Path(args.outdir) / 'plots' / f'eps_curves_synthetic_{args.schedule}_{args.delta_type}_{timestamp}.png'
+        eps_curves_path = Path(args.outdir) / 'plots' / f'eps_curves_synthetic_{args.schedule}_constant_{timestamp}.png'
         try:
             plot_lhs_rhs_vs_eps(
                 str(csv_path),
@@ -470,7 +461,7 @@ def main():
                 schedule=args.schedule,
                 ylog=True,
                 annotate=True,
-                title=f"Bound components vs ε — synthetic {args.delta_type} — schedule {args.schedule.upper()}"
+                title=f"Bound components vs ε — synthetic constant — schedule {args.schedule.upper()}"
             )
         except Exception as e:
             print(f"Warning: Failed to generate ε-curves plot: {e}")

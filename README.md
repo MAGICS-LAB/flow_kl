@@ -1,6 +1,6 @@
 # Flow Matching KL Divergence Bounds – Experiments
 
-This repository hosts the implementation of the numerical studies reported in “On Flow Matching KL Divergence,” Su et al., 2025. The code reproduces the empirical evidence supporting the paper’s deterministic KL error bounds and statistical convergence guarantees for flow matching.
+This repository hosts the implementation of the numerical studies reported in “On Flow Matching KL Divergence,” Su et al., 2025. The code reproduces the empirical evidence supporting the paper’s KL error bounds.
 
 For reference, the paper builds on the KL evolution identity:
 ```
@@ -116,12 +116,9 @@ python experiment.py --schedule a1 --load_model path/to/vtheta_schedule_a1_mse_0
 Validate the bound `KL(p₁|q₁) ≤ ε√S` using synthetic velocity fields:
 
 ```bash
-python experiment_pt2.py --schedule a1 --delta_type constant --delta_beta 0.0 0.05 0.1 0.2
-```
-
-For oscillatory perturbations:
+python experiment_pt2.py --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
 ```bash
-python experiment_pt2.py --schedule a1 --delta_type sine --delta_beta 0.025 0.05 0.075 0.1
+python experiment_pt2.py --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
 ```
 
 Run all Part 2 experiments:
@@ -230,12 +227,11 @@ python nolearning_test.py --schedule_p {a1,a2,a3} --schedule_q {a1,a2,a3} [--ski
 
 **Usage:**
 ```bash
-python experiment_pt2.py --schedule {a1,a2,a3} --delta_type {constant,sine} --delta_beta 0.0 0.05 0.1 [OPTIONS]
+python experiment_pt2.py --schedule {a1,a2,a3} --delta_beta 0.0 0.05 0.1 [OPTIONS]
 ```
 
 **Key arguments:**
 - `--schedule`: Velocity schedule (required)
-- `--delta_type`: Perturbation type: `constant` (δ(t)=β) or `sine` (δ(t)=β sin(2πt))
 - `--delta_beta`: List of β values for perturbations (repeatable)
 - `--K_eps`: Time points for ε computation (default: 101)
 - `--N_eps`: Samples per time for ε (default: 4096)
@@ -247,11 +243,7 @@ python experiment_pt2.py --schedule {a1,a2,a3} --delta_type {constant,sine} --de
 **Examples:**
 ```bash
 # Constant perturbations on a1
-python experiment_pt2.py --schedule a1 --delta_type constant --delta_beta 0.0 0.05 0.1 0.2
-
-# Sine perturbations on a2
-python experiment_pt2.py --schedule a2 --delta_type sine --delta_beta 0.025 0.05 0.075 0.1
-```
+python experiment_pt2.py --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
 
 ### `experiment_learn_pt2.py` - Part 2 Learned Bound Verification
 
@@ -391,8 +383,7 @@ python run_all_pt2_experiments.py
 
 This tests all combinations of:
 - Schedules: a1, a2, a3
-- Perturbation types: constant and sine
-- Perturbation strengths: β ∈ [0, 0.2] for constant, β ∈ [0.025, 0.1] for sine
+- Perturbation strengths: β ∈ [0, 0.2] for constant perturbations
 
 ## Output Files
 
@@ -474,93 +465,6 @@ The score `∇log q_t(x)` is computed by:
 3. Taking autograd gradient: `grad(log_q.sum(), x)`
 
 This gives the full Jacobian in one backprop pass.
-
-## Mathematical Background
-
-### Time-Evolving Distributions
-
-Given velocity field `a(t)`, the distribution evolves as:
-```
-p_t = N(0, σ_p(t)² I)
-```
-where `σ_p(t) = e^A(t)` and `A(t) = ∫₀ᵗ a(s) ds`.
-
-This describes a Gaussian that spreads over time according to the velocity schedule.
-
-### KL Divergence Between Gaussian Distributions
-
-For `p = N(0, σ_p²I)` and `q = N(0, σ_q²I)`:
-```
-KL(p|q) = (d/2) [r - 1 - log(r)]
-```
-where `r = σ_p²/σ_q²` and `d` is the dimension.
-
-### The Identity
-
-The KL divergence identity relates the global divergence to local misalignment:
-```
-KL(p_t|q_t) = ∫₀ᵗ E_{x~p_s}[(u(x,s)-v_θ(x,s))ᵀ(∇log p_s(x)-∇log q_s(x))] ds
-```
-
-This is useful because:
-- **LHS**: Requires solving ODEs and computing densities
-- **RHS**: Only requires evaluating velocities and scores at sampled points
-
-### Part 2: The Bound
-
-Part 2 validates a related bound on the KL divergence at terminal time t=1:
-```
-KL(p₁|q₁) ≤ ε√S
-```
-
-where:
-- **ε** = √(E_{t~U[0,1], x~p_t} |v(x,t) - u(x,t)|²) is the RMS flow-matching error
-- **S** = ∫₀¹ E_{x~p_t} |∇log p_t(x) - ∇log q_t(x)|² dt is the score-gap integral
-
-This bound provides a certificate of model quality: if ε and S are small, then the KL divergence at t=1 is guaranteed to be small. This is particularly useful because ε can be computed from validation data without solving ODEs.
-
-**Part 2 (Synthetic)**: Uses synthetic velocity fields v(x,t) = (a(t) + δ(t))x with perturbations δ(t) to systematically explore bound behavior across different model quality regimes.
-
-**Part 2 (Learning)**: Trains velocity MLPs and verifies the bound holds (and tightens) as training progresses, demonstrating practical applicability to learned models.
-
-## Troubleshooting
-
-### Model not converging
-
-1. **Increase training epochs**: Use `--epochs 500`
-2. **Lower target MSE**: Use `--target_mse 0.2` first
-3. **Check model capacity**: Larger hidden dims may help
-
-### Memory issues
-
-1. **Reduce batch size**: Use `--batch_size 64`
-2. **Reduce evaluation samples**: Use `--num_samples 1000`
-3. **Process in chunks**: Modify evaluation loop
-
-### ODE solver failures
-
-1. **Loosen tolerances**: Use `--rtol 1e-5 --atol 1e-7`
-2. **Reduce time span**: Check if issue is near t=0 or t=1
-3. **Increase max steps**: Modify in `eval.py`
-
-## File Naming Convention
-
-All output files use a consistent naming scheme:
-
-```
-{filename}_{schedule}_mse_{TARGET}_{YYYYMMDD_HHMMSS}.{ext}
-```
-
-Example:
-```
-kl_comparison_a2_mse_0-05_20251027_231335.png
-```
-
-Where:
-- `filename`: Plot/data name
-- `schedule`: a1, a2, or a3
-- `TARGET`: Target MSE (replaced `.` with `-`)
-- `TIMESTAMP`: When the experiment was run
 
 ## Dependencies
 

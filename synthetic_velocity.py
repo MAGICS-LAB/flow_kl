@@ -5,7 +5,6 @@ Provides a velocity field v(x,t) = (a(t) + δ(t))·x with analytic divergence,
 matching the API expected by the evaluation pipeline.
 """
 
-import math
 import torch
 
 
@@ -106,19 +105,6 @@ def constant_delta(beta):
     return lambda t: float(beta)
 
 
-def sine_delta(beta):
-    """
-    Factory for oscillatory perturbation δ(t) = β·sin(2πt).
-    
-    Args:
-        beta: Amplitude coefficient
-    
-    Returns:
-        Callable δ(t) -> float
-    """
-    return lambda t: float(beta) * math.sin(2 * math.pi * float(t))
-
-
 if __name__ == '__main__':
     """Basic sanity tests for SyntheticVelocity."""
     print("=" * 60)
@@ -172,19 +158,6 @@ if __name__ == '__main__':
     assert diff1 < 1e-12, f"Divergence failed: max diff = {diff1:.2e}"
     assert all_same, "Divergence depends on x (should not)"
     print("   ✓ Divergence correct and independent of x")
-    
-    # Test sine delta
-    print("\n3. Testing sine delta")
-    delta_fn_sine = sine_delta(0.2)
-    velocity_sine = SyntheticVelocity(a_fn, delta_fn_sine, dim=2)
-    
-    t_test = 0.25
-    expected_sine = 0.2 * math.sin(2 * math.pi * 0.25)
-    result_sine = delta_fn_sine(t_test)
-    
-    assert abs(result_sine - expected_sine) < 1e-12, "Sine delta incorrect"
-    print(f"   δ(0.25) = {result_sine:.6f}")
-    print("   ✓ Sine delta correct")
     
     print("\n" + "=" * 60)
     print("All sanity tests passed!")

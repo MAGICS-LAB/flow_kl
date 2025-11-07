@@ -1,9 +1,8 @@
 """
 Automated script to run all Part-2 bound verification experiments.
 
-Runs experiments for all schedules (a1, a2, a3) with all delta configurations:
+Runs experiments for all schedules (a1, a2, a3) with constant delta configurations:
 - Constant deltas: [0, 0.025, 0.05, 0.075, 0.1, 0.125, 0.15, 0.175, 0.2] (9 values)
-- Sine deltas: [0.025, 0.05, 0.075, 0.1] (4 values)
 """
 
 import subprocess
@@ -13,8 +12,6 @@ import sys
 schedules = ['a1', 'a2', 'a3']
 # Constant deltas: doubled from 4 to 8+ values with finer increments
 constant_betas = [0.0, 0.025, 0.05, 0.075, 0.1, 0.125, 0.15, 0.175, 0.2]
-# Sine deltas: doubled from 2 to 4 values with finer increments
-sine_betas = [0.025, 0.05, 0.075, 0.1]
 
 # Default experiment parameters (as per instructions)
 default_params = {
@@ -30,13 +27,12 @@ default_params = {
 }
 
 
-def run_experiment(schedule, delta_type, betas):
+def run_experiment(schedule, betas):
     """Run a single experiment."""
     cmd = [
         'python', 'experiment_pt2.py',
         '--mode', 'synthetic',
         '--schedule', schedule,
-        '--delta_type', delta_type,
         '--seed', str(default_params['seed']),
         '--K_eps', str(default_params['K_eps']),
         '--N_eps', str(default_params['N_eps']),
@@ -54,7 +50,7 @@ def run_experiment(schedule, delta_type, betas):
         cmd.append(str(beta))
     
     print("\n" + "="*80)
-    print(f"Running: schedule={schedule}, delta_type={delta_type}, betas={betas}")
+    print(f"Running: schedule={schedule}, betas={betas}")
     print("Command:", ' '.join(cmd))
     print("="*80 + "\n")
     
@@ -69,32 +65,21 @@ def main():
     print("="*80)
     print(f"Total experiments:")
     print(f"  Constant deltas: {len(schedules)} schedules × {len(constant_betas)} betas = {len(schedules) * len(constant_betas)}")
-    print(f"  Sine deltas: {len(schedules)} schedules × {len(sine_betas)} betas = {len(schedules) * len(sine_betas)}")
-    print(f"  Total: {len(schedules) * (len(constant_betas) + len(sine_betas))} experiments")
+    print(f"  Total: {len(schedules) * len(constant_betas)} experiments")
     print(f"\nSchedules: {schedules}")
     print(f"Constant betas: {constant_betas}")
-    print(f"Sine betas: {sine_betas}")
     print("="*80 + "\n")
     
     results = []
     
     # Run constant delta experiments
     print("\n" + "="*80)
-    print("PHASE 1: Constant Delta Experiments")
+    print("Constant Delta Experiments")
     print("="*80)
     for schedule in schedules:
-        success = run_experiment(schedule, 'constant', constant_betas)
+        success = run_experiment(schedule, constant_betas)
         results.append(('constant', schedule, success))
         print(f"\n{'✓' if success else '✗'} Constant deltas for schedule {schedule} completed")
-    
-    # Run sine delta experiments
-    print("\n" + "="*80)
-    print("PHASE 2: Sine Delta Experiments")
-    print("="*80)
-    for schedule in schedules:
-        success = run_experiment(schedule, 'sine', sine_betas)
-        results.append(('sine', schedule, success))
-        print(f"\n{'✓' if success else '✗'} Sine deltas for schedule {schedule} completed")
     
     # Summary
     print("\n" + "="*80)
