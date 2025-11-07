@@ -1,0 +1,50 @@
+# Custom folders
+instructions/
+old-junk/
+descriptions/
+data/part-2-learn/
+data/part-2/
+data/
+paper/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PowerShell scripts
+*.ps1
+
+# Project-specific data (uncomment if you want to exclude these)
+# data/models/
+# data/results/
+# data/plots/
+# data/plot-data/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
