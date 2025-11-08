@@ -1,5 +1,6 @@
 """
 Training loop for flow matching: learn v_θ(x,t) to match u(x,t)=a(t)x.
+Part 2 Learning version with checkpoint saving.
 """
 
 import torch
@@ -10,8 +11,103 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from pathlib import Path
+import json
+from datetime import datetime
+import subprocess
+import os
 
-from true_path import schedule_to_enum, velocity_u, sample_p_t, get_schedule_functions
+from core.true_path import schedule_to_enum, velocity_u, sample_p_t, get_schedule_functions
+
+
+def get_git_sha():
+    """Get current git SHA if available, else return None."""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=os.getcwd()
+        )
+        return result.stdout.strip()[:7]  # Short SHA
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def save_checkpoint_with_metadata(
+    model,
+    checkpoint_dir,
+    epoch,
+    val_mse,
+    val_nmse,
+    schedule,
+    seed,
+    train_params,
+    is_best=False,
+    is_final=False
+):
+    """
+    Save model checkpoint and metadata JSON.
+    
+    Args:
+        model: Model to save
+        checkpoint_dir: Directory to save checkpoints
+        epoch: Epoch number
+        val_mse: Validation MSE
+        val_nmse: Validation NMSE
+        schedule: Schedule enum
+        seed: Random seed
+        train_params: Dict with training parameters (lr, wd, epochs, batch_size)
+        is_best: Whether this is the best checkpoint
+        is_final: Whether this is the final checkpoint
+    """
+    checkpoint_dir = Path(checkpoint_dir)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    git_sha = get_git_sha()
+    
+    # Create checkpoint filename
+    val_mse_str = f"{val_mse:.2e}".replace('e-0', 'e-').replace('e+', 'e').replace('.', '-')
+    ckpt_filename = f"ckpt__sched={schedule.value}__epoch={epoch}__valmse={val_mse_str}__{timestamp}.pt"
+    ckpt_path = checkpoint_dir / ckpt_filename
+    
+    # Save model state dict
+    torch.save(model.state_dict(), ckpt_path)
+    
+    # Create metadata
+    metadata = {
+        'epoch': epoch,
+        'val_mse': float(val_mse),
+        'nmse': float(val_nmse),
+        'schedule': schedule.value,
+        'seed': seed,
+        'train_params': train_params,
+        'timestamp': timestamp,
+        'git_sha': git_sha
+    }
+    
+    # Save metadata JSON
+    metadata_path = ckpt_path.with_suffix('.json')
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+    
+    # Create aliases
+    if is_best:
+        best_path = checkpoint_dir / "best.pt"
+        best_metadata_path = checkpoint_dir / "best.json"
+        torch.save(model.state_dict(), best_path)
+        with open(best_metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+    
+    if is_final:
+        final_path = checkpoint_dir / "final.pt"
+        final_metadata_path = checkpoint_dir / "final.json"
+        torch.save(model.state_dict(), final_path)
+        with open(final_metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+    
+    return ckpt_path
 
 
 def train_velocity_model(
@@ -27,7 +123,10 @@ def train_velocity_model(
     target_nmse=1e-2,
     target_mse=None,
     device='cpu',
-    dtype=torch.float64
+    dtype=torch.float64,
+    checkpoint_dir=None,
+    save_epochs=None,
+    seed=None
 ):
     """
     Train v_θ to match u(x,t)=a(t)x via flow matching.
@@ -47,15 +146,20 @@ def train_velocity_model(
         target_nmse: Target normalized MSE
         device: torch device
         dtype: torch dtype
+        checkpoint_dir: Directory to save checkpoints (None to disable)
+        save_epochs: List of epoch numbers to save checkpoints regardless of improvement
+        seed: Random seed for metadata
     
     Returns:
         best_val_mse: Best validation MSE
-        training_history: dict with 'train_mse', 'val_mse'
+        training_history: dict with 'train_mse', 'val_mse', 'checkpoints'
+        checkpoints: List of checkpoint paths saved
     """
     model = model.to(device)
     
     # Setup optimizer and scheduler
-    optimizer = Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=1e-6)
+    weight_decay = 1e-6
+    optimizer = Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=weight_decay)
     scheduler = CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-4)
     
     # Track history
@@ -67,6 +171,19 @@ def train_velocity_model(
     
     best_val_mse = float('inf')
     patience_counter = 0
+    checkpoints_saved = []
+    
+    # Prepare training parameters for metadata
+    train_params = {
+        'lr': lr,
+        'wd': weight_decay,
+        'epochs': epochs,
+        'batch_size': batch_size,
+        'num_batches_per_epoch': num_batches_per_epoch
+    }
+    
+    # Normalize save_epochs to set for fast lookup
+    save_epochs_set = set(save_epochs) if save_epochs else set()
     
     # Get schedule functions
     _, A_func = get_schedule_functions(schedule)
@@ -74,6 +191,7 @@ def train_velocity_model(
     print(f"Training for {epochs} epochs on schedule {schedule.value}")
     print(f"Device: {device}, dtype: {dtype}")
     
+    final_epoch = epochs - 1  # Default to last epoch
     for epoch in tqdm(range(epochs), desc="Training"):
         # Training phase
         model.train()
@@ -114,27 +232,79 @@ def train_velocity_model(
             training_history['val_mse'].append(val_mse)
             training_history['val_nmse'].append(val_nmse)
             
+            is_best = False
             if val_mse < best_val_mse:
                 best_val_mse = val_mse
                 patience_counter = 0
+                is_best = True
             else:
                 patience_counter += 1
+            
+            # Save checkpoint if needed
+            if checkpoint_dir is not None:
+                should_save = is_best or (epoch in save_epochs_set)
+                if should_save:
+                    ckpt_path = save_checkpoint_with_metadata(
+                        model=model,
+                        checkpoint_dir=checkpoint_dir,
+                        epoch=epoch,
+                        val_mse=val_mse,
+                        val_nmse=val_nmse,
+                        schedule=schedule,
+                        seed=seed,
+                        train_params=train_params,
+                        is_best=is_best,
+                        is_final=False
+                    )
+                    checkpoints_saved.append(str(ckpt_path))
+                    if is_best:
+                        print(f"  ✓ Saved best checkpoint (val_mse={val_mse:.6e})")
             
             # Early stopping
             # Check if target_mse is specified, otherwise use target_nmse
             if target_mse is not None and val_mse <= target_mse:
                 print(f"\nReached target MSE {val_mse:.4e} at epoch {epoch}")
+                final_epoch = epoch
                 break
             elif val_nmse <= target_nmse:
                 print(f"\nReached target NMSE {val_nmse:.4e} at epoch {epoch}")
+                final_epoch = epoch
                 break
             elif patience_counter >= early_stop_patience:
                 print(f"\nEarly stopping at epoch {epoch} (no improvement for {early_stop_patience} epochs)")
+                final_epoch = epoch
                 break
         
         scheduler.step()
     
     print(f"\nTraining complete. Best val MSE: {best_val_mse:.6f}")
+    
+    # Save final checkpoint
+    if checkpoint_dir is not None:
+        # Get final validation metrics if available
+        if len(training_history['val_mse']) > 0:
+            final_val_mse = training_history['val_mse'][-1]
+            final_val_nmse = training_history['val_nmse'][-1]
+        else:
+            # Run final validation
+            final_val_mse, final_val_nmse = validate_model(
+                model, schedule, val_times, val_samples_per_time, device, dtype
+            )
+        
+        final_ckpt_path = save_checkpoint_with_metadata(
+            model=model,
+            checkpoint_dir=checkpoint_dir,
+            epoch=final_epoch,
+            val_mse=final_val_mse,
+            val_nmse=final_val_nmse,
+            schedule=schedule,
+            seed=seed,
+            train_params=train_params,
+            is_best=False,
+            is_final=True
+        )
+        checkpoints_saved.append(str(final_ckpt_path))
+        print(f"  ✓ Saved final checkpoint (val_mse={final_val_mse:.6e})")
     
     # Plot training and validation curves
     plot_training_curves(training_history, schedule)
@@ -142,6 +312,7 @@ def train_velocity_model(
     # Plot velocity comparison
     plot_velocity_comparison(model, schedule, num_samples=10, device=device, dtype=dtype)
     
+    training_history['checkpoints'] = checkpoints_saved
     return best_val_mse, training_history
 
 

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 from pathlib import Path
-from utils import smooth_curve, plot_comparison, ensure_dirs
+from core.utils import smooth_curve, plot_comparison, ensure_dirs
 
 
 def regenerate_from_data(plot_data_path, plot_data_dir, output_dir):

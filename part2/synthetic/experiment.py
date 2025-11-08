@@ -4,7 +4,7 @@ Main experiment script for Part-2 bound verification.
 Validates the bound: KL(p_1|q_1) ≤ ε√S
 
 Usage:
-    python experiment_pt2.py --mode synthetic --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
+    python -m part2.synthetic.experiment --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
 """
 
 import argparse
@@ -17,14 +17,14 @@ from tqdm import tqdm
 from datetime import datetime
 from pathlib import Path
 
-from utils import set_seed, get_device, ensure_dirs
-from true_path import Schedule, schedule_to_enum, get_schedule_functions
-from synthetic_velocity import SyntheticVelocity, constant_delta
-from eval_pt2 import (
-    compute_epsilon_pt2, compute_kl_at_t1_pt2, 
+from core.utils import set_seed, get_device, ensure_dirs
+from core.true_path import Schedule, schedule_to_enum, get_schedule_functions
+from part2.synthetic.synthetic_velocity import SyntheticVelocity, constant_delta
+from part2.synthetic.eval import (
+    compute_epsilon_pt2, compute_kl_at_t1_pt2,
     compute_score_gap_integral_pt2
 )
-from plot_eps_curves import plot_lhs_rhs_vs_eps
+from plotting.plot_eps_curves import plot_lhs_rhs_vs_eps
 
 
 def parse_args():

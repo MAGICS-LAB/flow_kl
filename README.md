@@ -4,60 +4,64 @@ This repository hosts the implementation of the numerical studies reported in �
 
 For reference, the paper builds on the KL evolution identity:
 ```
-KL(p_t|q_t) = ∫₀ᵗ E_x~p_t[(u(x,s) - v_θ(x,s))ᵀ(∇log p_s(x) - ∇log q_s(x))] ds
+KL(p_t | q_t) = int_0^t E_{x ~ p_t} [ (u(x,s) - v_theta(x,s))^T (grad log p_s(x) - grad log q_s(x)) ] ds
 ```
 
 where:
 - `p_t` evolves under velocity field `u(x,t) = a(t) x`
-- `q_t` evolves under learned velocity field `v_θ(x,t)`
+- `q_t` evolves under learned velocity field `v_theta(x,t)`
 - Both start as standard Gaussians: `p_0 = q_0 = N(0, I)`
 
 ## Project Structure
 
 ```
-fm-kl-2/
-├── README.md                    # This file
-├── requirements.txt             # Python dependencies
-├── Core Modules
-│   ├── true_path.py            # True distribution p_t storming (schedules, sampling, densities)
-│   ├── model.py                # Neural network v_θ(x,t)
-│   ├── train.py                # Training loop for v_θ
-│   ├── eval.py                 # Evaluation: backward ODE, KL LHS, RHS
-│   ├── utils.py                # Utilities: plotting, saving, error computation
-│   └── experiment.py           # Main orchestration script
-│
-├── Testing
-│   ├── test_golden_path.py     # LHS pipeline tests (A1-A3, B1)
-│   └── test_rhs.py             # RHS pipeline tests (R0-R3)
-│
-├── No-Learning Verification
-│   ├── nolearning_test.py      # Closed-form KL identity tests
-│   └── run_all_nolearning.sh   # Run all schedule permutations
-│
-├── Part 2: Synthetic Bound Verification
-│   ├── synthetic_velocity.py        # Synthetic velocity fields v(x,t)
-│   ├── eval_pt2.py                  # Part 2 evaluation functions
-│   ├── experiment_pt2.py            # Part 2 orchestrator
-│   ├── test_pt2.py                  # Part 2 unit tests
-│   └── run_all_pt2_experiments.py   # Automated Part 2 experiments
-│
-├── Part 2 (Learning): Learned Bound Verification
-│   ├── model_learn_pt2.py          # Velocity MLP (copy)
-│   ├── train_learn_pt2.py          # Training with checkpointing
-│   ├── eval_learn_pt2.py           # Learned evaluation functions
-│   ├── experiment_learn_pt2.py     # Part 2 Learning orchestrator
-│   └── test_learn_pt2.py           # Part 2 Learning unit tests
-│
-├── Automated Experiments
-│   ├── run_all_experiments.py  # Train and evaluate all schedules
-│   └── run_all_cross_eval.sh   # Cross-schedule evaluations
-│
-├── Plotting Utilities
-│   ├── plot_eps_curves.py      # Generate ε-curves used in Section 5
-│   ├── regenerate_plots.py     # Rebuild KL identity plots from saved JSON data
-│   └── regenerate_plots_from_csv.py  # Rebuild Part 2 plots from cleaned CSV files
-│
-└── (output artifacts are written to a data directory)
+flow_kl/
+├── README.md
+├── requirements.txt
+├── core/                        # Shared schedules, densities, utilities
+│   ├── __init__.py
+│   ├── true_path.py             # Schedules, sampling, densities, scores
+│   └── utils.py                 # Seeding, device helpers, plotting I/O
+├── part1/                       # Part 1: learned velocity identity experiments
+│   ├── __init__.py
+│   ├── experiment.py            # CLI: python -m part1.experiment
+│   ├── eval.py                  # LHS / RHS evaluation routines
+│   ├── model.py                 # Velocity MLP
+│   └── train.py                 # Training loop and plotting helpers
+├── part2/
+│   ├── __init__.py
+│   ├── synthetic/               # Part 2A: synthetic perturbation studies
+│   │   ├── __init__.py
+│   │   ├── experiment.py        # CLI: python -m part2.synthetic.experiment
+│   │   ├── eval.py              # Part 2 evaluation helpers
+│   │   ├── synthetic_velocity.py
+│   │   └── run_all_experiments.py
+│   └── learned/                 # Part 2B: learned perturbation studies
+│       ├── __init__.py
+│       ├── experiment.py        # CLI: python -m part2.learned.experiment
+│       ├── eval.py
+│       ├── model.py
+│       └── train.py
+├── plotting/                    # Plot regeneration & epsilon-curve utilities
+│   ├── __init__.py
+│   ├── plot_eps_curves.py
+│   ├── regenerate_plots.py
+│   └── regenerate_plots_from_csv.py
+├── scripts/                     # Automation & shell entry points
+│   ├── run_all_experiments.py / .ps1
+│   ├── run_all_cross_eval.sh / .ps1
+│   ├── run_all_nolearning.sh / .ps1
+│   ├── run_all_pt2_experiments.ps1
+│   ├── run_all_pt2_learn_experiments.ps1
+│   └── nolearning_test.py
+├── tests/                       # Unit / integration tests
+│   ├── __init__.py
+│   ├── test_golden_path.py
+│   ├── test_rhs.py
+│   ├── test_pt2.py
+│   ├── test_learn_pt2.py
+│   └── test_eps_curves.py
+└── data/                        # Generated checkpoints, plots, metrics
 ```
 
 ## Installation
@@ -83,20 +87,20 @@ This verifies the identity using analytic formulas (no neural networks):
 
 ```bash
 conda activate flow-kl
-python nolearning_test.py --schedule_p a1 --schedule_q aaffen
+python scripts/nolearning_test.py --schedule_p a1 --schedule_q a2 --skip_ode
 ```
 
 For all 6 schedule permutations:
 ```bash
-bash run_all_nolearning.sh
+bash scripts/run_all_nolearning.sh      # or: pwsh scripts/run_all_nolearning.ps1
 ```
 
 ### 2. Train and evaluate a model
 
-Train a model to learn velocity field `v_θ`:
+Train a model to learn velocity field `v_theta`:
 
 ```bash
-python experiment.py --schedule a1 --target_mse 0.05
+python -m part1.experiment --schedule a1 --target_mse 0.05
 ```
 
 This will reproduce the Section 5.2 checkpoints:
@@ -108,22 +112,20 @@ This will reproduce the Section 5.2 checkpoints:
 ### 3. Load a trained model and re-evaluate
 
 ```bash
-python experiment.py --schedule a1 --load_model path/to/vtheta_schedule_a1_mse_0-05_TIMESTAMP.pth
+python -m part1.experiment --schedule a1 --load_model path/to/vtheta_schedule_a1_mse_0-05_TIMESTAMP.pth
 ```
 
 ### 4. Part 2: Synthetic Bound Verification
 
-Validate the bound `KL(p₁|q₁) ≤ ε√S` using synthetic velocity fields:
+Validate the bound `KL(p_1 | q_1) <= eps * sqrt(S)` using synthetic velocity fields:
 
 ```bash
-python experiment_pt2.py --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
-```bash
-python experiment_pt2.py --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
+python -m part2.synthetic.experiment --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
 ```
 
 Run all Part 2 experiments:
 ```bash
-python run_all_pt2_experiments.py
+python -m part2.synthetic.run_all_experiments
 ```
 
 ### 5. Part 2 (Learning): Learned Bound Verification
@@ -131,7 +133,7 @@ python run_all_pt2_experiments.py
 Train a velocity MLP and verify the bound across training checkpoints:
 
 ```bash
-python experiment_learn_pt2.py --schedule a1 --epochs 400 --eval_checkpoints "all"
+python -m part2.learned.experiment --schedule a1 --epochs 400 --eval_checkpoints "all"
 ```
 
 This will:
@@ -139,332 +141,6 @@ This will:
 - Save multiple checkpoints (best, final, and on improvement)
 - Evaluate the bound for all saved checkpoints
 - Generate scatter plots showing bound tightening with training
-
-## Core Concepts
-
-### The Identity
-
-For time-evolving distributions:
-- **LHS**: KL divergence `KL(p_t|q_t)`
-- **RHS**: Integral of local misalignment between velocity fields and score functions
-
-The identity states these are equal for all `t ∈ [0,1]`.
-
-### Three Velocity Schedules
-
-The code supports three linear velocity schedules:
-
-- **a1(t)**: `sin(πt)`
-- **a2(t)**: `0.3 sin(2πt) + 0.2`
-- **a3(t)**: `t - 1/2`
-
-Each schedule generates a different time-evolving Gaussian distribution.
-
-### Evaluation Pipeline
-
-**LHS computation:**
-1. Sample `x ~ p_t`
-2. Solve backward ODE `ẋ(s) = v_θ(x(s), s)` from `s=t` to `s=0`
-3. Accumulate divergence: `ℓ = ∫₀ᵗ ∇·v_θ ds`
-4. Compute `log q_t(x) = log p_0(x₀) - ℓ`
-5. Compute score `∇log q_t(x)` via autograd
-6. Estimate `KL(p_t|q_t) = E[log p_t(x) - log q_t(x)]`
-
-**RHS computation:**
-1. Sample `x ~ p_t`
-2. Compute true velocity `u(x,t)` and learned velocity `v_θ(x,t)`
-3. Compute true score `∇log p_t(x)` and learned score `∇log q_t(x)`
-4. Evaluate integrand `(u-v)ᵀ(s_p - s_q)`
-5. Integrate over time using trapezoidal rule
-
-## Command-Line Interface
-
-### `experiment.py` - Main experiment script
-
-**Basic usage:**
-```bash
-python experiment.py --schedule {a1,a2,a3} [OPTIONS]
-```
-
-**Key arguments:**
-- `--schedule`: Which velocity schedule to use (required)
-- `--seed`: Random seed (default: 42)
-- `--target_mse`: Stop training when validation MSE reaches this value
-- `--target_nmse`: Stop training when normalized MSE reaches this (default: 1e-2)
-- `--load_model`: Path to saved model (skips training)
-- `--epochs`: Max training epochs (default: 300)
-- `--num_samples`: Samples per time point for evaluation (default: 2000)
-- `--num_times`: Number of time points (default: 101)
-- `--num_seeds`: Number of seeds to average over (default: 1)
-- `--rtol`, `--atol`: ODE solver tolerances (default: 1e-6, 1e-8)
-
-**Examples:**
-```bash
-# Train on schedule a1 with target MSE 0.05
-python experiment.py --schedule a1 --target_mse 0.05
-
-# High-resolution evaluation with tighter tolerances
-python experiment.py --schedule a1 --num_samples 4000 --num_times 201 --rtol 1e-7 --atol 1e-9 \
-    --load_model data/models/vtheta_schedule_a1_mse_0-05_TIMESTAMP.pth
-
-# Reduce variance by averaging over 3 seeds
-python experiment.py --schedule a1 --num_seeds 3 --load_model MODEL_PATH
-```
-
-### `nolearning_test.py` - Closed-form verification
-
-**Usage:**
-```bash
-python nolearning_test.py --schedule_p {a1,a2,a3} --schedule_q {a1,a2,a3} [--skip_ode]
-```
-
-**Arguments:**
-- `--schedule_p`: Schedule for distribution `p_t` (default: a1)
-- `--schedule_q`: Schedule for distribution `q_t` (default: a2)
-- `--skip_ode`: Skip ODE pipeline test for faster runs
-
-### `experiment_pt2.py` - Part 2 Synthetic Bound Verification
-
-**Usage:**
-```bash
-python experiment_pt2.py --schedule {a1,a2,a3} --delta_beta 0.0 0.05 0.1 [OPTIONS]
-```
-
-**Key arguments:**
-- `--schedule`: Velocity schedule (required)
-- `--delta_beta`: List of β values for perturbations (repeatable)
-- `--K_eps`: Time points for ε computation (default: 101)
-- `--N_eps`: Samples per time for ε (default: 4096)
-- `--K_S`: Time points for S computation (default: 101)
-- `--N_S`: Samples per time for S (default: 2048)
-- `--N_kl`: Samples for KL at t=1 (default: 20000)
-- `--rtol`, `--atol`: ODE tolerances (default: 1e-6, 1e-8)
-
-**Examples:**
-```bash
-# Constant perturbations on a1
-python experiment_pt2.py --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
-
-### `experiment_learn_pt2.py` - Part 2 Learned Bound Verification
-
-**Usage:**
-```bash
-python experiment_learn_pt2.py --schedule {a1,a2,a3} [OPTIONS]
-```
-
-**Training arguments:**
-- `--epochs`: Max training epochs (default: 400)
-- `--lr`: Learning rate (default: 1e-3)
-- `--batch_size`: Training batch size (default: 4)
-- `--batches_per_epoch`: Batches per epoch (default: 2)
-- `--val_times`: Validation time points (default: 64)
-- `--val_samples_per_time`: Validation samples (default: 2048)
-
-**Evaluation arguments:**
-- `--eval_checkpoints`: Checkpoints to evaluate: `"final,best"` or `"all"` (default: final,best)
-- `--eval_val_times`: Eval time points for ε_θ (default: 101)
-- `--eval_val_samples_per_time`: Eval samples for ε_θ (default: 1024)
-- `--eval_K_S`: Time points for S_θ (default: 101)
-- `--eval_N_S`: Samples per time for S_θ (default: 512)
-- `--eval_N_kl`: Samples for KL (default: 5000)
-- `--eval_rtol`, `--eval_atol`: Eval ODE tolerances (default: 1e-6, 1e-8)
-- `--eval_chunk_size`: Batch size for evaluation (default: 1024)
-- `--eval_seed`: Random seed for evaluation (default: 12345)
-- `--eval_only`: Skip training, only evaluate existing checkpoints
-
-**Examples:**
-```bash
-# Full training + evaluation
-python experiment_learn_pt2.py --schedule a1 --epochs 400 --eval_checkpoints "all"
-
-# Evaluate existing checkpoints only
-python experiment_learn_pt2.py --schedule a1 --eval_only --eval_checkpoints "all"
-```
-
-## Testing
-
-### LHS Pipeline Tests (`test_golden_path.py`)
-
-Golden-path tests using `v_θ = u` (the true velocity):
-
-- **A1**: Preimage computation (backward ODE)
-- **A2**: Divergence accumulation sign
-- **A3**: Log-density computation
-- **B1**: Normalization check
-
-```bash
-python test_golden_path.py
-```
-
-### RHS Pipeline Tests (`test_rhs.py`)
-
-Tests for the RHS integrand computation:
-
-- **R0**: Trivial identity (`v = u` → `g(t) ≡ 0`)
-- **R1(a)**: Analytic check with `v ≡ 0`
-- **R1(b)**: Analytic check with scaled field `v = c·u`
-- **R2**: Derivative consistency with LHS
-- **R3**: Internal decomposition sanity
-
-```bash
-python test_rhs.py
-```
-
-### No-Learning Tests (`nolearning_test.py`)
-
-Closed-form KL identity verification without learning:
-
-- Computes LHS using analytical KL formula
-- Computes RHS using analytical integrand
-- Verifies they match up to quadrature error
-- Checks derivative consistency
-
-```bash
-python nolearning_test.py --schedule_p a1 --schedule_q a2
-```
-
-### Part 2 Tests (`test_pt2.py`)
-
-Tests for synthetic velocity field validation:
-
-- **Synthetic velocity properties**: Forward and divergence correctness
-- **ODE reversibility**: Backward-forward consistency
-- **Score correctness**: Oracle comparison for linear fields
-- **ε checks**: RMS flow-matching error validation
-- **KL at t=1 checks**: KL divergence computation accuracy
-- **S convergence**: Score-gap integral convergence
-- **Bound verification**: KL ≤ ε√S across perturbation types
-
-```bash
-python test_pt2.py
-```
-
-### Part 2 (Learning) Tests (`test_learn_pt2.py`)
-
-Tests for learned model validation:
-
-- **T0**: Model wiring (forward, divergence)
-- **T1**: Training learns (loss decreases)
-- **T2**: ε_θ consistency (validate_model vs direct MC)
-- **T3**: Score oracle at small times
-- **T4**: Backward-ODE numerics
-- **T5**: Bound holds and tightens
-- **T6**: Reproducibility
-
-```bash
-python test_learn_pt2.py
-```
-
-## Automated Experiment Scripts
-
-### Train models for all schedules and target MSEs
-
-```bash
-python run_all_experiments.py
-```
-
-This trains models for schedules a1, a2, a3 with target MSEs: 0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8.
-
-### Cross-schedule evaluations
-
-```bash
-bash run_all_cross_eval.sh
-```
-
-Evaluates each schedule with models trained on *different* schedules (e.g., a1 vs a2-trained model).
-
-### Part 2 experiments (Synthetic)
-
-Run all synthetic bound verification experiments:
-
-```bash
-python run_all_pt2_experiments.py
-```
-
-This tests all combinations of:
-- Schedules: a1, a2, a3
-- Perturbation strengths: β ∈ [0, 0.2] for constant perturbations
-
-## Output Files
-
-All experiments write their artifacts (checkpoints, numeric summaries, and figures) into a data directory. Typical files include:
-
-- Model checkpoints (`*.pth`) containing network weights.
-- NumPy arrays (`t_grid_*.npy`, `kl_curve_*.npy`, `rhs_integrand_*.npy`, `rhs_cumulative_*.npy`) plus accompanying metadata JSON.
-- Figures such as `kl_comparison_*.png`, training curves, velocity comparisons, and Part 2 scatter/ε/f̂ plots.
-- Plot-data JSON files (`kl_comparison_{schedule}_mse_{TARGET}_TIMESTAMP.json`) that allow reproducible regeneration of figures.
-
-To regenerate plots with different styling:
-```bash
-# Part 1 plots (from JSON data)
-python regenerate_plots.py
-
-# Part 2 plots (from CSV files - works for both learned and synthetic)
-python regenerate_plots_from_csv.py path/to/results.csv --schedule a1
-```
-
-### ε-Curves Plotting
-
-The `plot_eps_curves.py` utility generates plots showing how LHS (KL divergence) and RHS (ε√S) components vary with ε (RMS flow-matching loss). This is useful for visualizing bound behavior across different checkpoints (learned) or perturbation strengths (synthetic).
-
-**Usage:**
-```bash
-# For learned data
-from plot_eps_curves import plot_lhs_rhs_vs_eps
-plot_lhs_rhs_vs_eps('path/to/learned_results.csv',
-                    'output.png', schedule='a1', ylog=True, annotate=True)
-
-# For synthetic data
-plot_lhs_rhs_vs_eps('path/to/synthetic_results.csv',
-                    'output.png', schedule='a1', ylog=True, annotate=True)
-```
-
-The plots automatically:
-- Detect CSV format (learned vs synthetic)
-- Handle zero epsilon values for log scale
-- Use dark green for LHS and dark red for RHS
-- Apply log scales to both axes
-- Annotate points with epochs (learned) or delta labels (synthetic)
-
-### Part 2 Outputs
-Synthetic experiments produce CSV/JSON summaries alongside scatter, bar, ε-curve, and f̂(t) figures for each perturbation setting. Learned experiments create schedule-specific bundles containing checkpoints (`ckpt__sched=*__epoch=*__valmse=*_TIMESTAMP.pt`), per-checkpoint metrics (`bound_*_TIMESTAMP.{csv,json}`), and plots (`bound_scatter_*_TIMESTAMP.png`, `eps_curves_*_TIMESTAMP.png`, `fhat_curves_*_TIMESTAMP.png`). These assets reside inside the data directory so you can regenerate or archive them without affecting the repository.
-
-## Key Implementation Details
-
-### Divergence Computation
-The divergence `∇·v_θ` is computed analytically by summing the diagonal of the Jacobian matrix:
-
-```python
-div = sum(dv_i/dx_i) for i in range(d)
-```
-
-This is exact for neural networks and differentiable.
-
-### Backward ODE
-To compute `q_t(x)`, we solve the backward ODE:
-```
-ẋ(s) = v_θ(x(s), s)  [forward direction]
-```
-
-using `odeint` with reversed time: integrating from `s=t` down to `s=0`.
-
-### Log-Density Computation
-```
-log q_t(x) = log p_0(x₀) - ℓ
-```
-where:
-- `x₀` is the preimage (from backward ODE)
-- `ℓ = ∫₀ᵗ ∇·v_θ ds` is the accumulated divergence
-
-Note the **subtraction** sign (not addition), which accounts for the change of variables.
-
-### Score Computation
-The score `∇log q_t(x)` is computed by:
-1. Setting `x.requires_grad_(True)`
-2. Computing `log_q = log_q_t(x, ...)`
-3. Taking autograd gradient: `grad(log_q.sum(), x)`
-
-This gives the full Jacobian in one backprop pass.
 
 ## Dependencies
 
@@ -476,18 +152,15 @@ This gives the full Jacobian in one backprop pass.
 - `tqdm>=4.65.0`: Progress bars
 - `seaborn>=0.12.0`: Statistical plots
 
-<!-- ## License
+## License
 
-[Specify your license here]
+This project is distributed under the [MIT License](LICENSE).
 
-## Citation
+<!-- ## Citation
 
 If you use this code, please cite:
 ```bibtex
-[Add citation information]
+[TBD citation information]
 ```
 
-## Contact
-
-[Add contact information if relevant] -->
 

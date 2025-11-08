@@ -1,9 +1,10 @@
 import torch
 import numpy as np
-from true_path import Schedule, sample_p_t, velocity_u, log_p_t, sigma_p, score_p_t
-from eval import log_q_t, score_q_t, compute_kl_lhs, compute_rhs_integrand
-from model import VelocityMLP
 import os
+
+from core.true_path import Schedule, sample_p_t, velocity_u, log_p_t, sigma_p, score_p_t
+from part1.eval import log_q_t, score_q_t, compute_kl_lhs, compute_rhs_integrand
+from part1.model import VelocityMLP
 
 
 def test_R0_trivial_identity():

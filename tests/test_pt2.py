@@ -16,9 +16,9 @@ import numpy as np
 import torch
 from torchdiffeq import odeint
 
-from synthetic_velocity import SyntheticVelocity, constant_delta
-from true_path import Schedule, get_schedule_functions, schedule_to_enum, sigma_p
-from eval_pt2 import (
+from part2.synthetic.synthetic_velocity import SyntheticVelocity, constant_delta
+from core.true_path import Schedule, get_schedule_functions, schedule_to_enum, sigma_p
+from part2.synthetic.eval import (
     backward_ode_and_divergence, log_q_t, score_q_t,
     compute_epsilon_pt2, compute_kl_at_t1_pt2, compute_score_gap_integral_pt2
 )
@@ -30,7 +30,7 @@ def test_synthetic_velocity():
     print("Test 1: SyntheticVelocity")
     print("="*60)
     
-    from true_path import get_schedule_functions, Schedule
+    from core.true_path import get_schedule_functions, Schedule
     
     # Get schedule function
     a_fn, A_fn = get_schedule_functions(Schedule.A1)
@@ -84,7 +84,7 @@ def test_ode_reversibility():
     print("Test 2: ODE Reversibility")
     print("="*60)
     
-    from true_path import get_schedule_functions, Schedule
+    from core.true_path import get_schedule_functions, Schedule
     
     # Get schedule function
     a_fn, A_fn = get_schedule_functions(Schedule.A1)
@@ -126,7 +126,7 @@ def test_score_correctness():
     print("Test 3: Score Correctness (Oracle)")
     print("="*60)
     
-    from true_path import get_schedule_functions, Schedule
+    from core.true_path import get_schedule_functions, Schedule
     
     # Get schedule function
     a_fn, A_fn = get_schedule_functions(Schedule.A1)
@@ -169,7 +169,7 @@ def test_epsilon_checks():
     print("Test 4: ε Checks")
     print("="*60)
     
-    from true_path import get_schedule_functions, Schedule
+    from core.true_path import get_schedule_functions, Schedule
     
     a_fn, A_fn = get_schedule_functions(Schedule.A1)
     schedule_enum = Schedule.A1
@@ -233,7 +233,7 @@ def test_kl_at_t1():
     print("Test 5: KL @ t=1")
     print("="*60)
     
-    from true_path import get_schedule_functions, Schedule
+    from core.true_path import get_schedule_functions, Schedule
     
     a_fn, A_fn = get_schedule_functions(Schedule.A1)
     schedule_enum = Schedule.A1
@@ -298,7 +298,7 @@ def test_s_convergence():
     print("Test 6: S Convergence")
     print("="*60)
     
-    from true_path import get_schedule_functions, Schedule
+    from core.true_path import get_schedule_functions, Schedule
     
     a_fn, A_fn = get_schedule_functions(Schedule.A1)
     schedule_enum = Schedule.A1
@@ -368,7 +368,7 @@ def test_bound_verification():
     print("Test 7: Bound Verification")
     print("="*60)
     
-    from true_path import get_schedule_functions, Schedule
+    from core.true_path import get_schedule_functions, Schedule
     
     a_fn, A_fn = get_schedule_functions(Schedule.A1)
     schedule_enum = Schedule.A1

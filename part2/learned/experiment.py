@@ -4,9 +4,9 @@ Main experiment script for Part-2 (Learning) bound verification.
 Trains a velocity MLP and validates the bound: KL(p_1|q^θ_1) ≤ ε_θ√S_θ
 
 Usage:
-    python experiment_learn_pt2.py --schedule a1 --epochs 400 --device cpu --eval_checkpoints "all" --eval_only
-    python experiment_learn_pt2.py --schedule a2 --epochs 400 --device cpu
-    python experiment_learn_pt2.py --schedule a1 --eval_checkpoints "final,best,50,100" --eval_only
+    python -m part2.learned.experiment --schedule a1 --epochs 400 --device cpu --eval_checkpoints "all" --eval_only
+    python -m part2.learned.experiment --schedule a2 --epochs 400 --device cpu
+    python -m part2.learned.experiment --schedule a1 --eval_checkpoints "final,best,50,100" --eval_only
 """
 
 import argparse
@@ -19,15 +19,15 @@ from tqdm import tqdm
 from datetime import datetime
 from pathlib import Path
 
-from utils import set_seed, get_device, ensure_dirs
-from true_path import Schedule, schedule_to_enum
-from model_learn_pt2 import VelocityMLP
-from train_learn_pt2 import train_velocity_model
-from eval_learn_pt2 import (
-    compute_epsilon_learn, compute_score_gap_integral_learn, 
+from core.utils import set_seed, get_device, ensure_dirs
+from core.true_path import Schedule, schedule_to_enum
+from part2.learned.model import VelocityMLP
+from part2.learned.train import train_velocity_model
+from part2.learned.eval import (
+    compute_epsilon_learn, compute_score_gap_integral_learn,
     compute_kl_at_t1_learn
 )
-from plot_eps_curves import plot_lhs_rhs_vs_eps
+from plotting.plot_eps_curves import plot_lhs_rhs_vs_eps
 
 
 def parse_args():

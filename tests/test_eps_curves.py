@@ -7,7 +7,8 @@ Tests the plot_eps_curves module using existing CSV files or generates a test CS
 import os
 import sys
 from pathlib import Path
-from plot_eps_curves import plot_lhs_rhs_vs_eps
+
+from plotting.plot_eps_curves import plot_lhs_rhs_vs_eps
 
 
 def test_with_existing_csv():

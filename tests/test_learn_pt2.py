@@ -9,14 +9,14 @@ import numpy as np
 from pathlib import Path
 import json
 
-from model_learn_pt2 import VelocityMLP
-from train_learn_pt2 import train_velocity_model, validate_model
-from eval_learn_pt2 import (
+from part2.learned.model import VelocityMLP
+from part2.learned.train import train_velocity_model, validate_model
+from part2.learned.eval import (
     compute_epsilon_learn, compute_score_gap_integral_learn,
     compute_kl_at_t1_learn, log_q_t, score_q_t
 )
-from true_path import Schedule, velocity_u, sample_p_t
-from utils import set_seed, get_device
+from core.true_path import Schedule, velocity_u, sample_p_t
+from core.utils import set_seed, get_device
 
 
 def test_T0_model_wiring():

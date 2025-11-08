@@ -14,7 +14,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 from pathlib import Path
-from true_path import Schedule, get_schedule_functions, schedule_to_enum
+
+from core.true_path import Schedule, get_schedule_functions, schedule_to_enum
 
 
 def a_u(t):
@@ -308,7 +309,7 @@ def test_ode_pipeline():
     print("=" * 60)
     
     from eval import log_q_t, score_q_t
-    from true_path import sample_p_t, Schedule
+    from core.true_path import sample_p_t, Schedule
     
     # Create a model that returns a_v(t)·x (the velocity for q)
     class QVelocityModel:

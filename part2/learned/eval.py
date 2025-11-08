@@ -17,11 +17,11 @@ import numpy as np
 import math
 from torchdiffeq import odeint
 
-from true_path import (
-    schedule_to_enum, velocity_u, score_p_t, log_p_t, 
+from core.true_path import (
+    schedule_to_enum, velocity_u, score_p_t, log_p_t,
     sigma_p, Schedule, sample_p_t
 )
-from train_learn_pt2 import validate_model
+from part2.learned.train import validate_model
 
 
 def divergence_of(velocity, x, t, need_grad_wrt_x=False):

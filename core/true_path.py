@@ -79,94 +79,94 @@ def schedule_to_enum(schedule_str):
 def sigma_p(t, schedule, a_func=None, A_func=None):
     """
     Compute σ_p(t) = exp(A(t)) where A(t) = ∫₀ᵗ a(s) ds.
-    
+
     Args:
         t: Time point(s) - scalar or tensor
         schedule: Schedule enum
         a_func, A_func: Optional pre-computed functions
-        
+
     Returns:
         σ_p(t) as tensor
     """
     if A_func is None:
         _, A_func = get_schedule_functions(schedule)
-    
+
     return torch.exp(A_func(t))
 
 
 def log_p_t(x, t, schedule, sigma_p_val=None):
     """
     Log density of p_t = N(0, σ_p(t)² I₂) at point x.
-    
+
     Formula: log p_t(x) = -(d/2) log(2π) - d log σ_p(t) - |x|²/(2σ_p(t)²)
-    
+
     Args:
         x: Point(s) of shape [..., 2]
         t: Time point(s)
         schedule: Schedule enum
         sigma_p_val: Pre-computed σ_p(t) (optional)
-    
+
     Returns:
         log p_t(x) as scalar or tensor
     """
     d = 2  # dimension
-    
+
     if sigma_p_val is None:
         sigma_p_val = sigma_p(t, schedule)
-    
+
     # Ensure x is a tensor
     if not isinstance(x, torch.Tensor):
         x = torch.tensor(x, dtype=torch.float64)
-    
+
     # Compute log p_t(x)
     constant = -(d / 2) * np.log(2 * np.pi)
     log_sigma = -d * torch.log(sigma_p_val)
     quadratic = -torch.sum(x ** 2, dim=-1) / (2 * sigma_p_val ** 2)
-    
+
     return constant + log_sigma + quadratic
 
 
 def score_p_t(x, t, schedule, sigma_p_val=None):
     """
     Score ∇log p_t(x) = -x / σ_p(t)².
-    
+
     Args:
         x: Point(s) of shape [..., 2]
         t: Time point(s)
         schedule: Schedule enum
         sigma_p_val: Pre-computed σ_p(t) (optional)
-    
+
     Returns:
         Score vector(s) of shape [..., 2]
     """
     if sigma_p_val is None:
         sigma_p_val = sigma_p(t, schedule)
-    
+
     if not isinstance(x, torch.Tensor):
         x = torch.tensor(x, dtype=torch.float64)
-    
+
     return -x / (sigma_p_val ** 2)
 
 
 def velocity_u(x, t, schedule):
     """
     True velocity field u(x,t) = a(t) x.
-    
+
     Args:
         x: Point(s) of shape [..., 2]
         t: Time point(s)
         schedule: Schedule enum
-    
+
     Returns:
         Velocity vector(s) of shape [..., 2]
     """
     a_func, _ = get_schedule_functions(schedule)
-    
+
     if not isinstance(x, torch.Tensor):
         x = torch.tensor(x, dtype=torch.float64)
-    
+
     a_val = a_func(t)
-    
+
     # Ensure proper broadcasting: a_val can be scalar or [batch_size]
     # Output should be [batch_size, 2]
     if x.dim() > 1:
@@ -174,58 +174,58 @@ def velocity_u(x, t, schedule):
         if a_val.dim() == 1:
             # Broadcast [batch_size] with [batch_size, 2]
             a_val = a_val.unsqueeze(-1)  # [batch_size, 1]
-    
+
     return a_val * x
 
 
 def sample_p_t(t, batch_size, schedule, device='cpu', dtype=torch.float64):
     """
     Sample x ~ p_t = N(0, σ_p(t)² I₂).
-    
+
     Implementation: sample z ~ N(0, I₂), set x = σ_p(t) z.
-    
+
     Args:
         t: Time point(s) - scalar or 1D tensor
         batch_size: Number of samples
         schedule: Schedule enum
         device: torch device
         dtype: torch dtype (default float64)
-    
+
     Returns:
         Samples of shape [batch_size, 2]
     """
     sigma_p_val = sigma_p(t, schedule)
-    
+
     # Sample z ~ N(0, I₂)
     z = torch.randn(batch_size, 2, dtype=dtype, device=device)
-    
+
     # Scale by σ_p(t)
     x = sigma_p_val * z
-    
+
     return x
 
 
 if __name__ == '__main__':
     # Test schedule functions
     t = torch.linspace(0, 1, 101, dtype=torch.float64)
-    
+
     print("Testing schedule functions...")
-    
+
     # Test a1
     a1_vals = a1(t)
     A1_vals = A1(t)
     print(f"a1(0.5) = {a1(0.5):.4f}, A1(0.5) = {A1(0.5):.4f}")
-    
+
     # Test a2
     a2_vals = a2(t)
     A2_vals = A2(t)
     print(f"a2(0.5) = {a2(0.5):.4f}, A2(0.5) = {A2(0.5):.4f}")
-    
+
     # Test a3
     a3_vals = a3(t)
     A3_vals = A3(t)
     print(f"a3(0.5) = {a3(0.5):.4f}, A3(0.5) = {A3(0.5):.4f}")
-    
+
     # Test sampling
     print("\nTesting sampling from p_t...")
     for sched in [Schedule.A1, Schedule.A2, Schedule.A3]:
@@ -234,6 +234,6 @@ if __name__ == '__main__':
         # Check variance
         var_estimate = torch.mean(samples ** 2, dim=0)
         print(f"Schedule {sched.value}: σ² = {sigma**2:.4f}, estimated = {var_estimate.mean():.4f}")
-    
+
     print("\ntrue_path.py loaded successfully")
 

@@ -30,7 +30,7 @@ default_params = {
 def run_experiment(schedule, betas):
     """Run a single experiment."""
     cmd = [
-        'python', 'experiment_pt2.py',
+        'python', '-m', 'part2.synthetic.experiment',
         '--mode', 'synthetic',
         '--schedule', schedule,
         '--seed', str(default_params['seed']),

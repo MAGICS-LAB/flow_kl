@@ -16,8 +16,9 @@ Test Summary:
 
 import torch
 import numpy as np
-from true_path import Schedule, sample_p_t, velocity_u, log_p_t, sigma_p
-from eval import backward_ode_and_divergence, log_q_t
+
+from core.true_path import Schedule, sample_p_t, velocity_u, log_p_t, sigma_p
+from part1.eval import backward_ode_and_divergence, log_q_t
 from torchdiffeq import odeint
 
 def test_A1_preimage():
@@ -282,7 +283,7 @@ def test_B1_normalization():
     print("=" * 60)
     
     # Use learned model (from training)
-    from model import VelocityMLP
+    from part1.model import VelocityMLP
     import os
     
     model_path = "data/models/vtheta_schedule_a1.pth"

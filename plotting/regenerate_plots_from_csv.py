@@ -7,7 +7,7 @@ Generates both the scatter plot and ε-curves plot from Part 2 Learning or Synth
 import sys
 import pandas as pd
 from pathlib import Path
-from plot_eps_curves import plot_lhs_rhs_vs_eps
+from .plot_eps_curves import plot_lhs_rhs_vs_eps
 import matplotlib.pyplot as plt
 
 

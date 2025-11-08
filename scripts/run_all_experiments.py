@@ -2,7 +2,7 @@
 Automated script to run experiments for all schedules and target MSE values.
 
 Usage:
-    python run_all_experiments.py
+    python scripts/run_all_experiments.py
 
 This script runs experiments for:
 - Schedules: a1, a2, a3
@@ -26,7 +26,7 @@ num_batches_per_epoch = 2
 def run_experiment(schedule, target_mse):
     """Run a single experiment."""
     cmd = [
-        'python', 'experiment.py',
+        'python', '-m', 'part1.experiment',
         '--schedule', schedule,
         '--num_samples', str(num_samples),
         '--num_times', str(num_times),

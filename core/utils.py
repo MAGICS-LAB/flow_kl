@@ -77,10 +77,10 @@ def plot_comparison(
     # Compute smoothed curves once
     kl_smooth = smooth_curve(kl_curve, window_size=5)
     rhs_smooth = smooth_curve(rhs_curve, window_size=5)
-    
+
     # Combined plot (two subplots)
     plt.figure(figsize=(12, 5))
-    
+
     # Left subplot: raw curves
     plt.subplot(1, 2, 1)
     if kl_std is not None and np.any(kl_std > 1e-12):
@@ -104,12 +104,10 @@ def plot_comparison(
     plt.tick_params(axis='both', which='major', labelsize=20)
     plt.legend(fontsize=16)
     plt.grid(True, alpha=0.3)
-    
+
     # Right subplot: smoothed curves
     plt.subplot(1, 2, 2)
-    # plt.plot(t_grid, kl_smooth, label='LHS (smoothed)', linewidth=4, alpha=0.9, color='darkgrey')
     plt.plot(t_grid, kl_smooth, label='KL Divergence (smoothed)', linewidth=4, alpha=0.9, color='darkgrey')
-    # plt.plot(t_grid, rhs_smooth, label='RHS (smoothed)', linewidth=4, alpha=0.9, linestyle='--', color='darkred')
     plt.plot(t_grid, rhs_smooth, label='Lemma 3.1 Identity (smoothed)', linewidth=4, alpha=0.9, linestyle='--', color='darkred')
     plt.xlabel('Time t', fontsize=24)
     plt.ylabel('KL Divergence', fontsize=24)
@@ -117,24 +115,24 @@ def plot_comparison(
     plt.tick_params(axis='both', which='major', labelsize=20)
     plt.legend(fontsize=16)
     plt.grid(True, alpha=0.3)
-    
+
     plt.suptitle(f'KL Identity Verification - Schedule {schedule.upper()}', fontsize=21, fontweight='bold')
     plt.tight_layout()
-    
+
     if save_path:
         ensure_dirs()
         plt.savefig(save_path, dpi=225, bbox_inches='tight')
         print(f"Saved plot to {save_path}")
-    
+
     plt.close()
-    
+
     # Individual plots
     if save_path:
         save_path_obj = Path(save_path)
         # Generate filenames for individual plots
         raw_path = save_path_obj.parent / f"{save_path_obj.stem}_raw{save_path_obj.suffix}"
         smoothed_path = save_path_obj.parent / f"{save_path_obj.stem}_smoothed{save_path_obj.suffix}"
-        
+
         # Raw plot
         plt.figure(figsize=(8, 6))
         if kl_std is not None and np.any(kl_std > 1e-12):
@@ -152,10 +150,9 @@ def plot_comparison(
             pass  # No shaded variance for RHS per requirement
         plt.plot(t_grid, kl_curve, label='KL Divergence', linewidth=4, alpha=0.9, color='darkgrey')
         plt.plot(t_grid, rhs_curve, label='Lemma 3.1 Identity', linewidth=4, alpha=0.9, linestyle='--', color='darkred')
-        
+
         plt.xlabel('Time t', fontsize=24)
         plt.ylabel('KL Divergence', fontsize=24)
-        # plt.title(f'KL Identity Verification (Learned) - Schedule {schedule.upper()}', fontsize=21, fontweight='bold')
         plt.tick_params(axis='both', which='major', labelsize=20)
         plt.legend(fontsize=16)
         plt.grid(True, alpha=0.3)
@@ -163,12 +160,10 @@ def plot_comparison(
         plt.savefig(raw_path, dpi=225, bbox_inches='tight')
         print(f"Saved raw plot to {raw_path}")
         plt.close()
-        
+
         # Smoothed plot
         plt.figure(figsize=(8, 6))
-        # plt.plot(t_grid, kl_smooth, label='LHS (smoothed)', linewidth=4, alpha=0.9, color='darkgrey')
         plt.plot(t_grid, kl_smooth, label='KL Divergence (smoothed)', linewidth=4, alpha=0.9, color='darkgrey')
-        # plt.plot(t_grid, rhs_smooth, label='RHS (smoothed)', linewidth=4, alpha=0.9, linestyle='--', color='darkred')
         plt.plot(t_grid, rhs_smooth, label='Lemma 3.1 Identity (smoothed)', linewidth=4, alpha=0.9, linestyle='--', color='darkred')
         plt.xlabel('Time t', fontsize=24)
         plt.ylabel('KL Divergence', fontsize=24)
@@ -185,31 +180,31 @@ def plot_comparison(
 def smooth_curve(y, window_size=5):
     """
     Apply moving average smoothing to reduce noise in curves.
-    
+
     Args:
         y: Array of values to smooth
         window_size: Size of the moving average window (must be odd)
-    
+
     Returns:
         Smoothed array
     """
     if window_size < 3:
         return y
-    
+
     # Ensure window_size is odd
     if window_size % 2 == 0:
         window_size += 1
-    
+
     half = window_size // 2
     smoothed = np.zeros_like(y)
-    
+
     # Pad boundaries with edge values
     y_padded = np.pad(y, (half, half), mode='edge')
-    
+
     # Apply moving average
     for i in range(len(y)):
         smoothed[i] = np.mean(y_padded[i:i+window_size])
-    
+
     return smoothed
 
 
@@ -219,7 +214,7 @@ def compute_relative_error(rhs, kl):
     epsilon = 1e-8
     abs_error = np.abs(rhs - kl)
     rel_error = abs_error / np.maximum(epsilon, np.abs(kl))
-    
+
     return {
         'median': float(np.median(rel_error) * 100),
         'max': float(np.max(rel_error) * 100),
@@ -243,17 +238,17 @@ def save_results(
 ):
     """Save experimental results to files."""
     ensure_dirs()
-    
+
     # Generate timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
+
     # Create filename suffix with target_mse if provided
     if target_mse is not None:
         mse_str = str(target_mse).replace('.', '-')
         suffix = f"_mse_{mse_str}_{timestamp}"
     else:
         suffix = f"_{timestamp}"
-    
+
     # Save numpy arrays
     results_dir = Path('data/results')
     np.save(results_dir / f't_grid_{schedule}{suffix}.npy', t_grid)
@@ -266,14 +261,14 @@ def save_results(
         np.save(results_dir / f'rhs_integrand_std_{schedule}{suffix}.npy', rhs_integrand_std)
     if rhs_cumulative_std is not None:
         np.save(results_dir / f'rhs_cumulative_std_{schedule}{suffix}.npy', rhs_cumulative_std)
-    
+
     # Save metadata
     metadata_path = results_dir / f'metadata_{schedule}{suffix}.json'
     with open(metadata_path, 'w') as f:
         json.dump(metadata, f, indent=2)
-    
+
     print(f"Saved results to {results_dir}")
-    
+
     # Plot comparison
     plot_path = Path('data/plots') / f'kl_comparison_{schedule}{suffix}.png'
     plot_comparison(
@@ -285,7 +280,7 @@ def save_results(
         kl_std=kl_curve_std,
         rhs_std=rhs_cumulative_std,
     )
-    
+
     # Save plot data (for regeneration)
     plot_data_dir = Path('data/plot-data')
     plot_data = {
