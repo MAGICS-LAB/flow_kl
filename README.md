@@ -121,7 +121,10 @@ Validate the bound $\mathrm{KL}(p_1 \mid q_1) \le \epsilon \sqrt{S}$ using synth
 
 ```bash
 python -m part2.synthetic.experiment --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
-```Run all Part 2 experiments:
+```
+
+Run all Part 2 experiments:
+
 ```bash
 python -m part2.synthetic.run_all_experiments
 ```
