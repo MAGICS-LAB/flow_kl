@@ -3,14 +3,14 @@
 This repository hosts the implementation of the numerical studies reported in “On Flow Matching KL Divergence,” Su et al., 2025. The code reproduces the empirical evidence supporting the paper’s KL error bounds.
 
 For reference, the paper builds on the KL evolution identity:
-```
-KL(p_t | q_t) = int_0^t E_{x ~ p_t} [ (u(x,s) - v_theta(x,s))^T (grad log p_s(x) - grad log q_s(x)) ] ds
-```
+$$
+\mathrm{KL}(p_t \mid q_t) = \int_0^t \mathbb{E}_{x \sim p_s} \left[ \big(u(x,s) - v_{\theta}(x,s)\big)^{\top} \big(\nabla \log p_s(x) - \nabla \log q_s(x)\big) \right] ds
+$$
 
 where:
-- `p_t` evolves under velocity field `u(x,t) = a(t) x`
-- `q_t` evolves under learned velocity field `v_theta(x,t)`
-- Both start as standard Gaussians: `p_0 = q_0 = N(0, I)`
+- $p_t$ evolves under velocity field $u(x,t) = a(t) \, x$
+- $q_t$ evolves under learned velocity field $v_{\theta}(x,t)$
+- Both start as standard Gaussians: $p_0 = q_0 = \mathcal{N}(0, I)$
 
 ## Project Structure
 
@@ -97,7 +97,7 @@ bash scripts/run_all_nolearning.sh      # or: pwsh scripts/run_all_nolearning.ps
 
 ### 2. Train and evaluate a model
 
-Train a model to learn velocity field `v_theta`:
+Train a model to learn velocity field $v_{\theta}$:
 
 ```bash
 python -m part1.experiment --schedule a1 --target_mse 0.05
@@ -117,13 +117,11 @@ python -m part1.experiment --schedule a1 --load_model path/to/vtheta_schedule_a1
 
 ### 4. Part 2: Synthetic Bound Verification
 
-Validate the bound `KL(p_1 | q_1) <= eps * sqrt(S)` using synthetic velocity fields:
+Validate the bound $\mathrm{KL}(p_1 \mid q_1) \le \epsilon \sqrt{S}$ using synthetic velocity fields:
 
 ```bash
 python -m part2.synthetic.experiment --schedule a1 --delta_beta 0.0 0.05 0.1 0.2
-```
-
-Run all Part 2 experiments:
+```Run all Part 2 experiments:
 ```bash
 python -m part2.synthetic.run_all_experiments
 ```
@@ -162,5 +160,8 @@ If you use this code, please cite:
 ```bibtex
 [TBD citation information]
 ```
+
+
+
 
 
