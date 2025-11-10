@@ -3,9 +3,9 @@
 This repository hosts the implementation of the numerical studies reported in “On Flow Matching KL Divergence,” Su et al., 2025. The code reproduces the empirical evidence supporting the paper’s KL error bounds.
 
 For reference, the paper builds on the KL evolution identity:
-$$
+```math
 \mathrm{KL}(p_t \mid q_t) = \int_0^t \mathbb{E}_{x \sim p_s} \left[ \big(u(x,s) - v_{\theta}(x,s)\big)^{\top} \big(\nabla \log p_s(x) - \nabla \log q_s(x)\big) \right] ds
-$$
+```
 
 where:
 - $p_t$ evolves under velocity field $u(x,t) = a(t) \, x$
